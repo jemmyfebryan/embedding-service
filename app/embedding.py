@@ -4,6 +4,10 @@ from pathlib import Path
 import numpy as np
 import os
 
+# Disable HuggingFace telemetry
+os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
+os.environ['HF_HUB_OFFLINE'] = '0'  # Allow first download, then use cache
+
 
 class EmbeddingService:
     """Service for handling text embeddings using sentence-transformers with dynamic model loading"""
@@ -64,13 +68,24 @@ class EmbeddingService:
             print(f"Loading model: {model_name}")
             print(f"Cache directory: {self.cache_dir.absolute()}")
 
-            model = SentenceTransformer(
-                model_name,
-                cache_folder=str(self.cache_dir)
-            )
+            # Try loading from local cache first (no HF Hub contact)
+            try:
+                model = SentenceTransformer(
+                    model_name,
+                    cache_folder=str(self.cache_dir),
+                    local_files_only=True
+                )
+                print(f"Loaded model from local cache: {model_name}")
+            except Exception:
+                # Model not in cache, download it (this will contact HF Hub)
+                print(f"Model not in cache, downloading from HF Hub...")
+                model = SentenceTransformer(
+                    model_name,
+                    cache_folder=str(self.cache_dir)
+                )
+                print(f"Downloaded and loaded model: {model_name}")
 
             self.models[model_name] = model
-            print(f"Successfully loaded model: {model_name}")
 
             # Cache model info
             self.model_info_cache[model_name] = {
