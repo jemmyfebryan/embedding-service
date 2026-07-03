@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'embedding-service',
       script: 'uvicorn',
-      args: 'app.main:app --host 0.0.0.0 --port 8000',
+      args: 'app.main:app --host 0.0.0.0 --port 8800',
       interpreter: 'none',
       cwd: '/home/jemmy/projects/outsider/embedding-service',
       instances: 1,

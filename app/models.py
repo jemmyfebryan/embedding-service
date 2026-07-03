@@ -3,79 +3,51 @@ from pydantic import BaseModel, Field
 
 
 class EmbeddingRequest(BaseModel):
-    """Request model matching Gemini's embedding API structure"""
+    """Request model for text embeddings"""
 
-    class Content(BaseModel):
-        parts: List[str]
-
-    content: Content
-    model: Optional[str] = Field(default="models/embedding-001", description="Model identifier")
+    model: str = Field(default="models/embedding-001", description="Model identifier")
+    texts: List[str] = Field(..., description="List of text strings to embed")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "model": "models/embedding-001",
-                "content": {
-                    "parts": ["Your text string here"]
-                }
+                "texts": ["Your text string here"]
             }
         }
 
 
-class EmbeddingValue(BaseModel):
-    """Individual embedding value"""
-
-    values: List[float]
-
-
-class Embedding(BaseModel):
-    """Embedding result for a single content item"""
-
-    value: EmbeddingValue
-
-
 class EmbeddingResponse(BaseModel):
-    """Response model matching Gemini's embedding API structure"""
+    """Response model for embeddings"""
 
-    class EmbeddingResult(BaseModel):
-        embeddings: List[Embedding]
-
-    embedding: EmbeddingResult
-
-
-class BatchEmbeddingRequest(BaseModel):
-    """Batch embedding request for multiple texts"""
-
-    class Content(BaseModel):
-        parts: List[str]
-
-    contents: List[Content]
-    model: Optional[str] = Field(default="models/embedding-001", description="Model identifier")
+    embeddings: List[List[float]] = Field(..., description="List of embedding vectors")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "model": "models/embedding-001",
-                "contents": [
-                    {"parts": ["First text string"]},
-                    {"parts": ["Second text string"]}
+                "embeddings": [
+                    [0.1, -0.2, 0.3, -0.4, 0.5]
                 ]
             }
         }
 
 
-class BatchEmbeddingResponse(BaseModel):
-    """Batch embedding response"""
+class ModelInfo(BaseModel):
+    """Model information"""
+    model_name: str
+    max_seq_length: int
+    embedding_dimension: int
 
-    class EmbeddingResult(BaseModel):
-        embeddings: List[Embedding]
 
-    embedding: EmbeddingResult
+class ModelsListResponse(BaseModel):
+    """Response for model listing endpoint"""
+    available_models: List[str]
+    loaded_models: List[str]
+    model_info: dict
 
 
 class HealthResponse(BaseModel):
     """Health check response"""
-
     status: str
     model: str
     ready: bool

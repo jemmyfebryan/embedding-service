@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Test script for the embedding service with dynamic model support"""
+"""Test script for the embedding service with simplified API"""
 
 import requests
 import json
 
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8800"
 
 
 def test_root():
@@ -44,18 +44,17 @@ def test_single_embedding():
     print("=== Testing Single Text Embedding ===")
     payload = {
         "model": "models/embedding-001",
-        "content": {
-            "parts": ["Hello, world! This is a test."]
-        }
+        "texts": ["Hello, world! This is a test."]
     }
     response = requests.post(
-        f"{BASE_URL}/v1/models/embedding-001:embedText",
+        f"{BASE_URL}/v1/embed",
         json=payload
     )
     print(f"Status: {response.status_code}")
     result = response.json()
-    print(f"Embedding dimension: {len(result['embedding']['embeddings'][0]['value']['values'])}")
-    print(f"First 10 values: {result['embedding']['embeddings'][0]['value']['values'][:10]}")
+    print(f"Response: {json.dumps(result, indent=2)}")
+    print(f"Embedding dimension: {len(result['embeddings'][0])}")
+    print(f"First 10 values: {result['embeddings'][0][:10]}")
     print()
 
 
@@ -64,62 +63,38 @@ def test_batch_embedding():
     print("=== Testing Batch Embedding ===")
     payload = {
         "model": "models/embedding-001",
-        "contents": [
-            {"parts": ["First text string"]},
-            {"parts": ["Second text string"]},
-            {"parts": ["Third text string"]}
+        "texts": [
+            "First text string",
+            "Second text string",
+            "Third text string"
         ]
     }
     response = requests.post(
-        f"{BASE_URL}/v1/models/embedding-001:batchEmbedText",
+        f"{BASE_URL}/v1/embed",
         json=payload
     )
     print(f"Status: {response.status_code}")
     result = response.json()
-    print(f"Number of embeddings: {len(result['embedding']['embeddings'])}")
-    print(f"Embedding dimension: {len(result['embedding']['embeddings'][0]['value']['values'])}")
-    print()
-
-
-def test_dynamic_model():
-    """Test dynamic model selection via URL"""
-    print("=== Testing Dynamic Model Selection (URL) ===")
-    payload = {
-        "content": {
-            "parts": ["Testing dynamic model via URL path"]
-        }
-    }
-    # Use all-MiniLM-L6-v2 directly in the URL
-    response = requests.post(
-        f"{BASE_URL}/v1/models/all-MiniLM-L6-v2:embedText",
-        json=payload
-    )
-    print(f"Status: {response.status_code}")
-    if response.status_code == 200:
-        result = response.json()
-        print(f"Embedding dimension: {len(result['embedding']['embeddings'][0]['value']['values'])}")
-    else:
-        print(f"Error: {response.text}")
+    print(f"Number of embeddings: {len(result['embeddings'])}")
+    print(f"Embedding dimension: {len(result['embeddings'][0])}")
     print()
 
 
 def test_model_override():
-    """Test model override in request body"""
-    print("=== Testing Model Override in Request Body ===")
+    """Test different model selection"""
+    print("=== Testing Different Model Selection ===")
     payload = {
         "model": "models/all-MiniLM-L6-v2",
-        "content": {
-            "parts": ["Testing model override in request body"]
-        }
+        "texts": ["Testing model selection"]
     }
     response = requests.post(
-        f"{BASE_URL}/v1/models/embedding-001:embedText",
+        f"{BASE_URL}/v1/embed",
         json=payload
     )
     print(f"Status: {response.status_code}")
     if response.status_code == 200:
         result = response.json()
-        print(f"Embedding dimension: {len(result['embedding']['embeddings'][0]['value']['values'])}")
+        print(f"Embedding dimension: {len(result['embeddings'][0])}")
     else:
         print(f"Error: {response.text}")
     print()
@@ -131,23 +106,15 @@ def test_consistency():
     text = "Consistency test text"
     payload = {
         "model": "models/embedding-001",
-        "content": {
-            "parts": [text]
-        }
+        "texts": [text]
     }
 
-    response1 = requests.post(
-        f"{BASE_URL}/v1/models/embedding-001:embedText",
-        json=payload
-    )
-    response2 = requests.post(
-        f"{BASE_URL}/v1/models/embedding-001:embedText",
-        json=payload
-    )
+    response1 = requests.post(f"{BASE_URL}/v1/embed", json=payload)
+    response2 = requests.post(f"{BASE_URL}/v1/embed", json=payload)
 
     if response1.status_code == 200 and response2.status_code == 200:
-        emb1 = response1.json()['embedding']['embeddings'][0]['value']['values']
-        emb2 = response2.json()['embedding']['embeddings'][0]['value']['values']
+        emb1 = response1.json()['embeddings'][0]
+        emb2 = response2.json()['embeddings'][0]
 
         # Check if embeddings are identical
         are_identical = emb1 == emb2
@@ -162,6 +129,37 @@ def test_consistency():
     print()
 
 
+def test_empty_texts():
+    """Test error handling for empty texts"""
+    print("=== Testing Empty Texts Error Handling ===")
+    payload = {
+        "model": "models/embedding-001",
+        "texts": []
+    }
+    response = requests.post(f"{BASE_URL}/v1/embed", json=payload)
+    print(f"Status: {response.status_code}")
+    print(f"Response: {response.text}")
+    print()
+
+
+def test_large_batch():
+    """Test with larger batch"""
+    print("=== Testing Large Batch ===")
+    payload = {
+        "model": "models/embedding-001",
+        "texts": [f"Text number {i}" for i in range(100)]
+    }
+    response = requests.post(f"{BASE_URL}/v1/embed", json=payload)
+    print(f"Status: {response.status_code}")
+    if response.status_code == 200:
+        result = response.json()
+        print(f"Number of embeddings: {len(result['embeddings'])}")
+        print(f"Each embedding dimension: {len(result['embeddings'][0])}")
+    else:
+        print(f"Error: {response.text}")
+    print()
+
+
 if __name__ == "__main__":
     try:
         test_root()
@@ -169,9 +167,10 @@ if __name__ == "__main__":
         test_list_models()
         test_single_embedding()
         test_batch_embedding()
-        test_dynamic_model()
         test_model_override()
         test_consistency()
+        test_empty_texts()
+        test_large_batch()
         print("✅ All tests passed!")
 
         # Check models directory
