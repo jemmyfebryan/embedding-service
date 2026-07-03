@@ -76,7 +76,7 @@ class EmbeddingService:
             self.model_info_cache[model_name] = {
                 "model_name": model_name,
                 "max_seq_length": model.max_seq_length,
-                "embedding_dimension": model.get_sentence_embedding_dimension(),
+                "embedding_dimension": model.get_embedding_dimension(),
             }
 
             return model
