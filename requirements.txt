@@ -1,0 +1,9 @@
+# Use CPU-only PyTorch wheel index
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+fastapi
+uvicorn[standard]
+sentence-transformers
+torch
+pydantic
+numpy
